@@ -615,10 +615,12 @@ document.getElementById('reportForm').onsubmit = async function(e) {
         }
         submitted = true;
         try { await callApi('deleteDraft'); } catch (err) { /* 下書きが残るだけなので無視 */ }
-        if (result.line && result.line !== 'sent') {
+        if (result.line === 'sent') {
+            alert('日報の送信が完了しました！\nLINEに日報PDFをお送りします。');
+        } else if (result.line) {
             alert('日報の送信が完了しました！\n\n※ LINEへのPDF送付はできませんでした。\n理由：' + result.line);
         } else {
-            alert('日報の送信が完了しました！\nLINEに日報PDFをお送りします。');
+            alert('日報の送信が完了しました！\n\n※ LINEへのPDF送付の結果が分かりませんでした（GASが古い版のままの可能性があります）。');
         }
         if (!MOCK && liff.isInClient()) {
             liff.closeWindow();

@@ -357,6 +357,45 @@ function buildReportFlex_(p, pdfUrl) {
   };
 }
 
+/**
+ * LINE送信の確認用：エディタで実行すると、「スタッフ」シートの一番下の人に
+ * テストのカードをLINEで送り、結果を実行ログに出す
+ */
+function testLinePush() {
+  const token = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  console.log('① トークン: ' + (token ? '登録あり（' + token.length + '文字）' : '★未登録★ プロジェクトの設定 → スクリプト プロパティ に LINE_CHANNEL_ACCESS_TOKEN を登録してください'));
+  if (!token) return;
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('スタッフ');
+  if (!sheet || sheet.getLastRow() < 2) {
+    console.log('② ★「スタッフ」シートに登録がありません。LINEからフォームを開いてスタッフ登録してください');
+    return;
+  }
+  const last = sheet.getRange(sheet.getLastRow(), 1, 1, 2).getValues()[0];
+  console.log('② 送り先: ' + last[1] + '（ユーザーID ' + String(last[0]).slice(0, 6) + '…）');
+
+  // 友だちかどうか（プロフィールが取れれば、この公式LINEの友だち）
+  const prof = UrlFetchApp.fetch('https://api.line.me/v2/bot/profile/' + last[0], {
+    headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true
+  });
+  console.log('③ 友だち確認: ' + prof.getResponseCode() + ' ' + prof.getContentText());
+  if (prof.getResponseCode() === 401) console.log('   ★トークンが正しくありません（コピー漏れ・別チャネルのトークンの可能性）');
+  if (prof.getResponseCode() === 404) console.log('   ★この人は公式LINEの友だちではない、またはLINEログインチャネルと公式LINEのプロバイダーが違います');
+
+  const msg = buildReportFlex_({
+    date: Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd'), site: 'テスト送信', record: last[1],
+    locationArray: [{ loc: 'これはテストです', qty: '', unit: '' }]
+  }, 'https://drive.google.com/');
+  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'post', contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify({ to: last[0], messages: [msg] }),
+    muteHttpExceptions: true
+  });
+  console.log('④ 送信結果: ' + res.getResponseCode() + ' ' + res.getContentText());
+  if (res.getResponseCode() === 200) console.log('   → 送信成功。LINEにテストのカードが届いているはずです');
+}
+
 /** カードの見た目確認用：実行するとログにカードのJSONが出る（LINEには送らない） */
 function testReportFlex() {
   const sample = {
