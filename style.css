@@ -1,0 +1,255 @@
+/* 全体のレイアウト設定 */
+body { 
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif; 
+    background: #f4f7f9; 
+    display: flex; 
+    justify-content: center; 
+    padding: 20px; 
+    margin: 0; 
+}
+
+.form-container { 
+    background: white; 
+    padding: 20px; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    width: 100%; 
+    max-width: 450px; 
+}
+
+h2 { 
+    text-align: center; 
+    margin-bottom: 20px; 
+    color: #333; 
+    font-size: 1.4rem;
+}
+
+/* フォームグループ */
+.form-group { 
+    margin-bottom: 12px; 
+    display: flex; 
+    flex-direction: column; 
+}
+
+label { 
+    font-weight: bold; 
+    margin-bottom: 5px; 
+    font-size: 0.85rem; 
+    color: #555; 
+}
+
+/* ★ 入力項目共通スタイル（高さと余白を統一） */
+input, select, textarea { 
+    padding: 12px 10px; /* 上下余白 */
+    border: 1px solid #ddd; 
+    border-radius: 6px; 
+    font-size: 1rem; 
+    line-height: 1.5; /* ★ 行の高さを指定して安定させる */
+    outline: none; 
+    background-color: #ffffff !important; 
+    box-sizing: border-box; 
+    width: 100%;
+    font-weight: normal; 
+    color: #333;
+    /* iOS Safariでのデフォルトスタイルを徹底的に排除 */
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* ★ スマホで細くなる時刻・日付入力を強制的に高くする */
+input[type="time"], 
+input[type="date"] {
+    min-height: 50px; /* ★ 他の項目（12px padding × 2 + line-height）と合わせる */
+    display: flex;
+    align-items: center;
+}
+
+/* セレクトボックスの右側矢印が消える場合の対策（必要に応じて） */
+select {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 1em;
+    padding-right: 30px;
+}
+
+/* プレースホルダーの設定 */
+::placeholder {
+    font-weight: normal !important;
+    color: #999;
+    opacity: 1; 
+}
+
+/* 自動入力項目の背景色 */
+.readonly-field { 
+    /* background-color: #f8f9fa !important;  */
+    color: #666; 
+    /* border-color: #eee;  */
+}
+
+/* 横並びレイアウト */
+.form-row { 
+    display: flex; 
+    gap: 8px; 
+}
+
+.flex-grow { 
+    flex: 1; 
+}
+
+.input-small { 
+    width: 80px; 
+}
+
+/* ボタンのスタイル */
+.primary-btn { 
+    background: #007bff; 
+    color: white; 
+    border: none; 
+    padding: 16px; 
+    border-radius: 8px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    width: 100%; 
+    font-size: 1rem;
+}
+
+.primary-btn:active {
+    background: #0056b3;
+}
+
+.add-btn { 
+    width: 100%; 
+    background: #f8f9fa; 
+    color: #444; 
+    border: 1px dashed #ccc; 
+    padding: 12px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    margin-bottom: 5px; 
+}
+
+/* 動的な追加行 */
+.dynamic-row { 
+    display: flex; 
+    gap: 6px; 
+    margin-bottom: 8px; 
+    align-items: center; 
+}
+
+.remove-btn { 
+    background: none; 
+    color: #dc3545; 
+    border: none; 
+    font-size: 1.5rem; 
+    cursor: pointer; 
+    padding: 0 10px;
+}
+
+hr { 
+    border: 0; 
+    border-top: 1px solid #eee; 
+    margin: 10px 0; 
+}
+
+#submitBtn { 
+    background: #28a745; 
+}
+
+/* 初期状態（valueが空）のセレクトボックスの色を薄くする */
+.loc-unit {
+    color: #888; /* プレースホルダーの色 */
+}
+
+/* 値が選択されたら黒くする（JSで制御） */
+.loc-unit.selected {
+    color: #000;
+}
+/* ===== Ver5.1 追加：スタッフ登録・一時保存 ===== */
+.secondary-btn {
+    background: #f1f3f5;
+    color: #444;
+    border: 1px solid #ccc;
+    padding: 16px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.draft-btn {
+    width: 100%;
+    margin-top: 10px;
+    background: white;
+    color: #007bff;
+    border: 2px solid #007bff;
+    padding: 14px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+}
+.draft-btn:disabled { opacity: 0.6; }
+
+.text-btn {
+    background: none;
+    border: none;
+    color: #007bff;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 12px 0;
+    width: 100%;
+    font-size: 0.95rem;
+}
+.text-btn.small { width: auto; padding: 4px 0; font-size: 0.8rem; }
+
+.staff-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    background: #eef5ff;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.draft-banner {
+    background: #fff8e1;
+    border: 1px solid #ffd54f;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+.draft-banner p { margin: 0 0 10px; font-size: 0.9rem; font-weight: bold; color: #6d4c00; }
+.draft-banner .primary-btn, .draft-banner .secondary-btn { padding: 12px; }
+
+.lead { font-size: 0.9rem; color: #555; line-height: 1.6; margin-top: 0; }
+
+.center-msg { text-align: center; padding: 40px 0; color: #666; }
+.spinner {
+    width: 36px; height: 36px; margin: 0 auto 12px;
+    border: 4px solid #e3e3e3; border-top-color: #007bff; border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(33, 37, 41, 0.92);
+    color: white;
+    padding: 12px 18px;
+    border-radius: 24px;
+    font-size: 0.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    max-width: 90%;
+    text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }

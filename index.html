@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>日報フォーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="form-container">
+    <h2>日報フォーム</h2>
+
+    <!-- 読み込み中 -->
+    <div id="loadingView" class="center-msg">
+        <div class="spinner"></div>
+        <p id="loadingText">読み込み中...</p>
+    </div>
+
+    <!-- スタッフ登録（初回のみ・変更時） -->
+    <div id="registerView" style="display:none;">
+        <p class="lead" id="registerLead">はじめての方は、スタッフ登録をお願いします。<br>次回から記入者が自動で入ります。</p>
+        <div class="form-group"><label>名前</label><input type="text" id="regName" placeholder="山田 太郎" autocomplete="name"></div>
+        <div class="form-group"><label>企業名</label><input type="text" id="regCompany" placeholder="〇〇建設" autocomplete="organization"></div>
+        <div class="form-group"><label>電話番号</label><input type="tel" id="regPhone" placeholder="090-1234-5678" autocomplete="tel" inputmode="tel"></div>
+        <button type="button" id="registerBtn" class="primary-btn">登録する</button>
+        <button type="button" id="registerCancelBtn" class="text-btn" style="display:none;">変更せずに戻る</button>
+    </div>
+
+    <form id="reportForm" style="display:none;">
+        <div class="staff-bar">
+            <span>記入者：<strong id="staffLabel"></strong></span>
+            <button type="button" id="editStaffBtn" class="text-btn small">登録情報を変更</button>
+        </div>
+        <div id="draftBanner" class="draft-banner" style="display:none;"></div>
+
+        <div id="step1">
+            <div class="form-group"><label>記入者</label><input type="text" id="record" class="readonly-field" readonly required></div>
+            <div class="form-group"><label>日付</label><input type="date" id="date" required></div>
+            <div class="form-row">
+                <div class="form-group flex-grow"><label>開始時刻</label><input type="time" id="startTime" required></div>
+                <div class="form-group flex-grow"><label>終了時刻</label><input type="time" id="endTime" required></div>
+            </div>
+            <div class="form-group">
+                <label>天気</label>
+                <select id="weather" required>
+                    <option value="" disabled selected>選択してください</option>
+                    <option value="晴れ">晴れ</option>
+                    <option value="曇り">曇り</option>
+                    <option value="雨">雨</option>
+                    <option value="雪">雪</option>
+                </select>
+            </div>
+            <!-- <div class="form-group">
+                <label>現場名</label>
+                <select id="site" required><option value="">読込中...</option></select>
+            </div> -->
+            <div class="form-group">
+                <label>現場名</label>
+                <select id="site" class="form-control">
+                    <option value="" disabled selected>現場を選択</option>
+                    <option value="OTHER_SITE">その他（直接入力）</option>
+                </select>
+                
+                <input type="text" id="otherSiteInput" class="form-control" 
+                       style="display:none; margin-top:10px;" 
+                       placeholder="現場名を入力してください">
+            </div>
+            <div class="form-group">
+                <label>監督者</label>
+                <input type="text" id="director" class="readonly-field">
+            </div>
+            <div class="form-group">
+                <label>元請け</label>
+                <input type="text" id="primeContractor" class="readonly-field">
+            </div>
+            <div class="form-group">
+                <label>営業担当者</label>
+                <input type="text" id="salesStaff" class="readonly-field">
+            </div>
+            <div class="form-row">
+                <div class="form-group input-small"><label>人工</label><input type="number" id="memberCount" required></div>
+                <div class="form-group flex-grow"><label>作業者名</label><input type="text" id="memberName" placeholder="鈴木、佐藤、藤井..." required></div>
+            </div>
+            <div class="form-group">
+                <label>応援者名(任意)</label><input type="text" id="support" placeholder="鈴木、佐藤、藤井...">
+            </div>
+            <div class="form-group">
+                <label>施工内容 ※1つ目必須</label>
+                <div id="locationContainer">
+                    <div class="dynamic-row">
+                        <input type="text" class="loc-input flex-grow" placeholder="箇所 1">
+                        <input type="text" style="width: 70px;" class="loc-qty" placeholder="数量">
+                        <select class="loc-unit" style="width: 80px;">
+                            <option value="" disabled selected>単位</option> 
+                            <option value="m">m</option>
+                            <option value="㎡">㎡</option>
+                            <option value="カ所">カ所</option>
+                        </select>
+                    </div>
+                    <div class="dynamic-row">
+                        <input type="text" class="loc-input flex-grow" placeholder="箇所 2">
+                        <input type="text" style="width: 70px;" class="loc-qty" placeholder="数量">
+                        <select class="loc-unit" style="width: 80px;">
+                            <option value="" disabled selected>単位</option> 
+                            <option value="m">m</option>
+                            <option value="㎡">㎡</option>
+                            <option value="カ所">カ所</option>
+                        </select>
+                    </div>
+                    <div class="dynamic-row">
+                        <input type="text" class="loc-input flex-grow" placeholder="箇所 3">
+                        <input type="text" style="width: 70px;" class="loc-qty" placeholder="数量">
+                        <select class="loc-unit" style="width: 80px;">
+                            <option value="" disabled selected>単位</option> 
+                            <option value="m">m</option>
+                            <option value="㎡">㎡</option>
+                            <option value="カ所">カ所</option>
+                        </select>
+                    </div>
+                    <div class="dynamic-row">
+                        <input type="text" class="loc-input flex-grow" placeholder="箇所 4">
+                        <input type="text" style="width: 70px;" class="loc-qty" placeholder="数量">
+                        <select class="loc-unit" style="width: 80px;">
+                            <option value="" disabled selected>単位</option> 
+                            <option value="m">m</option>
+                            <option value="㎡">㎡</option>
+                            <option value="カ所">カ所</option>
+                        </select>
+                    </div>
+                    <div class="dynamic-row">
+                        <input type="text" class="loc-input flex-grow" placeholder="箇所 5">
+                        <input type="text" style="width: 70px;" class="loc-qty" placeholder="数量">
+                        <select class="loc-unit" style="width: 80px;">
+                            <option value="" disabled selected>単位</option> 
+                            <option value="m">m</option>
+                            <option value="㎡">㎡</option>
+                            <option value="カ所">カ所</option>
+                        </select>
+                    </div>
+                    <div class="dynamic-row">
+                        <input type="text" class="loc-input flex-grow" placeholder="箇所 6">
+                        <input type="text" style="width: 70px;" class="loc-qty" placeholder="数量">
+                        <select class="loc-unit" style="width: 80px;">
+                            <option value="" disabled selected>単位</option> 
+                            <option value="m">m</option>
+                            <option value="㎡">㎡</option>
+                            <option value="カ所">カ所</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>備考 ※任意</label>
+                <textarea id="notes" rows="4" placeholder="連絡事項があれば記入"></textarea>
+            </div>
+            <button type="button" id="nextBtn1" class="primary-btn">次へ（材料入力）</button>
+            <button type="button" class="draft-btn">一時保存</button>
+        </div>
+
+        <!-- <div id="step2" style="display: none;">
+            <div class="form-group">
+                <label>使用材料（任意）</label>
+                <div id="materialContainer"></div>
+                <button type="button" id="addMaterialBtn" class="add-btn">＋ 材料を追加</button>
+            </div>
+            <div class="form-row" style="margin-top: 25px;">
+                <button type="button" id="backBtn1" class="secondary-btn">戻る</button>
+                <button type="button" id="nextBtn2" class="primary-btn flex-grow">内容確認へ</button>
+            </div>
+        </div> -->
+
+        <div id="step2" style="display: none;">
+            <div class="form-group">
+                <label>使用材料（任意）</label>
+                <div id="materialContainer"></div>
+                <button type="button" id="addMaterialBtn" class="add-btn">＋ 材料を追加</button>
+            </div>
+        
+            <div class="form-group" style="margin-top: 30px;">
+                <label>その他（経費・備品など）</label>
+                <div id="extraContainer"></div>
+                <button type="button" id="addExtraBtn" class="add-btn">＋ 項目を追加</button>
+            </div>
+        
+            <div class="form-row" style="margin-top: 25px;">
+                <button type="button" id="backBtn1" class="secondary-btn">戻る</button>
+                <button type="button" id="nextBtn2" class="primary-btn flex-grow">内容確認へ</button>
+            </div>
+            <button type="button" class="draft-btn">一時保存</button>
+        </div>
+
+        <div id="step3" style="display: none;">
+            <div class="confirm-box">
+                <h3 style="text-align:center; color:#007bff; margin-top:0;">入力内容の確認</h3>
+                <p><strong>記入者:</strong> <span id="conf-record"></span></p>
+                <p><strong>日付:</strong> <span id="conf-date"></span></p>
+                <p><strong>作業時間:</strong> <span id="conf-time"></span></p>
+                <p><strong>天気:</strong> <span id="conf-weather"></span></p>
+                <hr>
+                <p><strong>現場名:</strong> <span id="conf-site"></span></p>
+                <p><strong>監督者:</strong> <span id="conf-director"></span></p>
+                <p><strong>元請け:</strong> <span id="conf-primeContractor"></span></p>
+                <p><strong>営業担当:</strong> <span id="conf-salesStaff"></span></p>
+                <p><strong>作業者:</strong> <span id="conf-name"></span> (<span id="conf-count"></span>名)</p>
+                <p><strong>応援者:</strong> <span id="conf-support"></span></p>
+                <hr>
+                <div id="conf-locations-list" class="conf-list"></div>
+                <p><strong>備考:</strong> <span id="conf-notes"></span></p>
+                <hr>
+                <div id="conf-materials-list" class="conf-list"></div>
+            </div>
+            <div class="form-row" style="margin-top: 20px;">
+                <button type="button" id="backBtn2" class="secondary-btn">修正する</button>
+                <button type="submit" id="submitBtn" class="primary-btn flex-grow">この内容で送信する</button>
+            </div>
+        </div>
+    </form>
+</div>
+<div id="toast" class="toast"></div>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
