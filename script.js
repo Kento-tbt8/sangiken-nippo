@@ -39,7 +39,17 @@ async function startApp() {
             showRegister(false);
         } else {
             showForm();
-            if (me.draft) showDraftBanner(me.draft);
+            let pending = null;
+            try { pending = JSON.parse(localStorage.getItem('pendingDraft')); } catch (e) {}
+            if (pending) {
+                // ログインし直す前の入力内容を戻して、サーバーにも保存しておく
+                localStorage.removeItem('pendingDraft');
+                applyDraft(pending);
+                await saveDraft(true);
+                toast('ログインし直しました。入力内容は残っています');
+            } else if (me.draft) {
+                showDraftBanner(me.draft);
+            }
         }
     } catch (e) {
         console.error(e);
@@ -64,6 +74,11 @@ async function callApi(action, extra = {}) {
         // ログインの有効期限切れ → 1回だけログインし直す
         if (data.error === 'invalid_token' && !sessionStorage.getItem('relogin')) {
             sessionStorage.setItem('relogin', '1');
+            // 入力中の内容を消さないよう、ログインし直す前に端末に一時退避する
+            if (document.getElementById('reportForm').style.display !== 'none') {
+                try { localStorage.setItem('pendingDraft', JSON.stringify(collectDraft())); } catch (e) {}
+                alert('ログインの有効期限が切れたため、LINEにログインし直します。入力内容はそのまま残ります。');
+            }
             liff.logout();
             liff.login({ redirectUri: location.href });
             await new Promise(() => {}); // 画面遷移を待つ
@@ -527,6 +542,16 @@ document.getElementById('reportForm').onsubmit = async function(e) {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; btn.innerText = "送信中...";
 
+    // 送る前にログインが有効か確かめる（切れていたら入力を残したままログインし直す）
+    if (!MOCK) {
+        try { await callApi('getMe'); }
+        catch (err) {
+            alert('通信に失敗しました。電波の良い場所でもう一度お試しください。');
+            btn.disabled = false; btn.innerText = "この内容で送信する";
+            return;
+        }
+    }
+
     const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : "";
 
     const siteVal = getVal('site');
@@ -568,14 +593,33 @@ document.getElementById('reportForm').onsubmit = async function(e) {
         notes: getVal('notes'),
         locationArray: locArray,
         materialArray: matArray,
-        extraArray: extraArray
+        extraArray: extraArray,
+        idToken: MOCK ? '' : getIdToken()   // 送った本人にPDFをLINEで送るため
     };
 
     try {
-        if (!MOCK) await fetch(gasUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+        let result = { result: 'success', line: 'sent' };
+        if (!MOCK) {
+            const res = await fetch(gasUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+            result = await res.json();
+        }
+        if (result.result !== 'success') {
+            // 記録に失敗した時は下書きを消さずに、理由を出す
+            alert('日報の送信に失敗しました。\n' + (result.message || '') + '\n\n「一時保存」してから、管理者に連絡してください。');
+            btn.disabled = false; btn.innerText = "この内容で送信する";
+            return;
+        }
         submitted = true;
         try { await callApi('deleteDraft'); } catch (err) { /* 下書きが残るだけなので無視 */ }
-        alert('日報の送信が完了しました！');
+        if (result.line && result.line !== 'sent') {
+            alert('日報の送信が完了しました！\n\n※ LINEへのPDF送付はできませんでした。\n理由：' + result.line);
+        } else {
+            alert('日報の送信が完了しました！\nLINEに日報PDFをお送りします。');
+        }
         if (!MOCK && liff.isInClient()) {
             liff.closeWindow();
         } else {

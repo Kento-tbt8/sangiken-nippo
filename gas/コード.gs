@@ -9,7 +9,10 @@
  * 元請けが空の日報は「名称なし」フォルダに入ります。
  * → スプシをお客様のドライブへ移したりコピーしたりすると、保存先も自動でお客様側になります。
  *
- * 決まったフォルダに保存したい時だけ、フォルダのID（URLの folders/ の後ろ）を入れてください。
+ * 決まったフォルダに保存したい時だけ、フォルダのリンク（またはID）を入れてください。
+ *   例：const PDF_FOLDER_ID = 'https://drive.google.com/drive/folders/xxxxxxxx';
+ * その中に元請けごとのフォルダが作られます。
+ * ※ GASを実行するアカウント（デプロイした人）が、そのフォルダの「編集者」である必要があります。
  */
 const PDF_FOLDER_ID = '';
 const PDF_FOLDER_NAME = '日報PDF';
@@ -24,6 +27,19 @@ function doPost(e) {
 
     // スタッフ登録・一時保存（「スタッフと下書き」ファイルで処理）
     if (p.action) return handleNippouAction_(p);
+
+    // 送った本人のLINEユーザーID（PDFをLINEで送るのに使う）。確認できなくても日報の記録は続ける
+    let lineUserId = null;
+    let lineStatus = '';
+    try {
+      if (p.idToken) lineUserId = verifyLineIdToken_(p.idToken);
+      else lineStatus = 'フォームからLINEのログイン情報が届いていません（フォームが古い版の可能性）';
+    } catch (err) {
+      lineStatus = 'LINEの本人確認に失敗しました（' + err.message + '）';
+      console.warn(lineStatus);
+    }
+
+    let pdfFile = null;
 
     // 同時に送信された時に、日報シート・管理番号・PDFが混ざらないよう1件ずつ処理する
     const lock = LockService.getScriptLock();
@@ -147,13 +163,24 @@ function doPost(e) {
 
         SpreadsheetApp.flush(); // 反映確定
 
-        createPdf(dailySheet, p.date, p.site, p.primeContractor); // PDF作成
+        pdfFile = createPdf(dailySheet, p.date, p.site, p.primeContractor); // PDF作成
       }
     } finally {
       lock.releaseLock();
     }
 
-    return ContentService.createTextOutput(JSON.stringify({result: 'success'})).setMimeType(ContentService.MimeType.JSON);
+    // 送った本人に、PDFのリンクをLINEで送る（失敗しても日報の記録はそのまま）
+    if (!pdfFile && !lineStatus) lineStatus = 'PDFが作られていません（「日報シート」が見つからない可能性）';
+    if (pdfFile && lineUserId) {
+      try {
+        lineStatus = sendPdfToLine_(lineUserId, p, pdfFile);
+      } catch (err) {
+        lineStatus = 'LINEへの送信に失敗しました（' + err.message + '）';
+        console.error(lineStatus);
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({result: 'success', line: lineStatus})).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({result: 'error', message: err.toString()})).setMimeType(ContentService.MimeType.JSON);
   }
@@ -183,13 +210,56 @@ function createPdf(sheet, date, site, primeContractor) {
     muteHttpExceptions: true
   });
 
+  if (response.getResponseCode() !== 200) {
+    throw new Error('PDFの書き出しに失敗しました（' + response.getResponseCode() + '）');
+  }
   const blob = response.getBlob().setName(fileName);
-  getPrimeFolder_(getPdfFolder_(ssId), primeContractor).createFile(blob);
+  return getPrimeFolder_(getPdfFolder_(ssId), primeContractor).createFile(blob);
+}
+
+/**
+ * 送った本人に、日報PDFのリンクをLINEで送る
+ *
+ * 必要な設定：Apps Script の「プロジェクトの設定」→「スクリプト プロパティ」に
+ *   LINE_CHANNEL_ACCESS_TOKEN … 公式LINE（Messaging API チャネル）のチャネルアクセストークン（長期）
+ * を登録する。未登録なら何もしない。
+ */
+function sendPdfToLine_(userId, p, file) {
+  const token = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  if (!token) {
+    const msg = 'スクリプト プロパティに LINE_CHANNEL_ACCESS_TOKEN が登録されていません';
+    console.warn(msg);
+    return msg;
+  }
+
+  // リンクを知っている人だけが見られるようにする（LINEのトークから開けるようにするため）
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  const message = buildReportFlex_(p, file.getUrl());
+
+  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify({ to: userId, messages: [message] }),
+    muteHttpExceptions: true
+  });
+  const code = res.getResponseCode();
+  if (code === 200) return 'sent';
+  if (code === 401) throw new Error('チャネルアクセストークンが正しくありません');
+  if (code === 400 && /to/.test(res.getContentText())) {
+    throw new Error('送り先のユーザーが見つかりません。LINEログインチャネルとMessaging APIチャネルが同じプロバイダーか確認してください');
+  }
+  throw new Error('LINE送信エラー ' + code + ' ' + res.getContentText());
 }
 
 /** PDFの保存先フォルダを返す（PDF_FOLDER_ID が空なら、スプシと同じ場所の「日報PDF」フォルダ） */
 function getPdfFolder_(ssId) {
-  if (PDF_FOLDER_ID) return DriveApp.getFolderById(PDF_FOLDER_ID);
+  if (PDF_FOLDER_ID) {
+    // フォルダのリンクをそのまま貼っても、ID部分だけ取り出して使う
+    const m = String(PDF_FOLDER_ID).match(/folders\/([\w-]+)/);
+    return DriveApp.getFolderById(m ? m[1] : String(PDF_FOLDER_ID).trim());
+  }
 
   const parents = DriveApp.getFileById(ssId).getParents();
   const parent = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
@@ -205,6 +275,97 @@ function getPrimeFolder_(baseFolder, primeContractor) {
 function getOrCreateFolder_(parent, name) {
   const found = parent.getFoldersByName(name);
   return found.hasNext() ? found.next() : parent.createFolder(name);
+}
+
+/**
+ * LINEに送る「日報受付」カード（Flex Message）
+ * 上：緑の帯に「日報を受け付けました」／中：日報の要点／下：「PDFを確認する」ボタン
+ */
+function buildReportFlex_(p, pdfUrl) {
+  const val = (v) => (v === undefined || v === null || String(v).trim() === '') ? '―' : String(v);
+
+  // 2026-11-24 → 2026年11月24日（火）
+  let dateLabel = val(p.date);
+  const dm = String(p.date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dm) {
+    const d = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]));
+    dateLabel = dm[1] + '年' + Number(dm[2]) + '月' + Number(dm[3]) + '日（' + '日月火水木金土'[d.getDay()] + '）';
+  }
+
+  const time = (p.startTime || p.endTime) ? (val(p.startTime) + ' 〜 ' + val(p.endTime)) : '―';
+  const workers = val(p.name) + (p.count ? '（' + p.count + '名）' : '');
+  const locations = (p.locationArray || [])
+    .filter(l => l.loc)
+    .map(l => '・' + l.loc + (l.qty ? '　' + l.qty + (l.unit || '') : ''))
+    .join('\n');
+
+  const row = (label, value) => ({
+    type: 'box', layout: 'baseline', spacing: 'md',
+    contents: [
+      { type: 'text', text: label, size: 'sm', color: '#8C8C8C', flex: 2 },
+      { type: 'text', text: value, size: 'sm', color: '#333333', flex: 5, wrap: true }
+    ]
+  });
+
+  const body = [
+    { type: 'text', text: val(p.site), weight: 'bold', size: 'lg', wrap: true, color: '#222222' },
+    { type: 'text', text: dateLabel, size: 'sm', color: '#666666', margin: 'sm' },
+    { type: 'separator', margin: 'lg' },
+    {
+      type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm',
+      contents: [
+        row('元請け', val(p.primeContractor)),
+        row('監督', val(p.director)),
+        row('作業時間', time),
+        row('天気', val(p.weather)),
+        row('作業者', workers),
+        row('記入者', val(p.record))
+      ]
+    }
+  ];
+  if (locations) {
+    body.push(
+      { type: 'separator', margin: 'lg' },
+      { type: 'text', text: '施工内容', size: 'sm', color: '#8C8C8C', margin: 'lg' },
+      { type: 'text', text: locations, size: 'sm', color: '#333333', wrap: true, margin: 'sm' }
+    );
+  }
+
+  return {
+    type: 'flex',
+    altText: '日報を受け付けました（' + val(p.site) + '）',
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: '#28A745', paddingAll: '16px',
+        contents: [
+          { type: 'text', text: '✓ 日報を受け付けました', color: '#FFFFFF', weight: 'bold', size: 'md' }
+        ]
+      },
+      body: { type: 'box', layout: 'vertical', paddingAll: '16px', contents: body },
+      footer: {
+        type: 'box', layout: 'vertical', paddingAll: '12px',
+        contents: [
+          {
+            type: 'button', style: 'primary', color: '#007BFF', height: 'sm',
+            action: { type: 'uri', label: 'PDFを確認する', uri: pdfUrl }
+          }
+        ]
+      }
+    }
+  };
+}
+
+/** カードの見た目確認用：実行するとログにカードのJSONが出る（LINEには送らない） */
+function testReportFlex() {
+  const sample = {
+    date: '2026-11-24', startTime: '08:00', endTime: '17:00', weather: '晴れ',
+    site: '〇〇ビル', director: '山田太郎', primeContractor: 'A社', record: '山田太郎',
+    name: '酒井、森、長谷部、馬場', count: '4',
+    locationArray: [{ loc: '基礎', qty: '12', unit: '㎡' }, { loc: '外壁', qty: '30', unit: 'm' }]
+  };
+  console.log(JSON.stringify(buildReportFlex_(sample, 'https://drive.google.com/'), null, 2));
 }
 
 /**
