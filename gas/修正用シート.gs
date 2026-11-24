@@ -2,7 +2,7 @@
  * 【修正用】日報シート：送った日報を直して、記録を上書きし、PDFを再発行する
  *
  * 使い方
- *   1. 管理No.（J2）に直したい日報の番号を入れる
+ *   1. 管理No.（J1）に直したい日報の番号を入れる
  *   2. 「このデータを修正する」ボタン → 報告データ・材料データから中身を読み込む
  *   3. シート上で直す
  *   4. 「PDF再発行」ボタン →
@@ -18,7 +18,7 @@
  */
 
 const FIX_SHEET_NAME = '【修正用】日報シート';
-const FIX_NO_CELL = 'J2';            // 管理No. を入れるセル
+const FIX_NO_CELL = 'J1';            // 管理No. を入れるセル
 const FIX_PRINT_RANGE = 'A4:X41';    // PDFにする範囲
 const FIX_HISTORY_SHEET = '修正履歴';
 const FIX_MARK_COLOR = '#FFF2CC';    // 修正した行の色（薄い黄色）

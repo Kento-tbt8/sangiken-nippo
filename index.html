@@ -154,7 +154,6 @@
                 <textarea id="notes" rows="4" placeholder="連絡事項があれば記入"></textarea>
             </div>
             <button type="button" id="nextBtn1" class="primary-btn">次へ（材料入力）</button>
-            <button type="button" class="draft-btn">一時保存</button>
         </div>
 
         <!-- <div id="step2" style="display: none;">
@@ -186,7 +185,6 @@
                 <button type="button" id="backBtn1" class="secondary-btn">戻る</button>
                 <button type="button" id="nextBtn2" class="primary-btn flex-grow">内容確認へ</button>
             </div>
-            <button type="button" class="draft-btn">一時保存</button>
         </div>
 
         <div id="step3" style="display: none;">
@@ -213,6 +211,11 @@
                 <button type="button" id="backBtn2" class="secondary-btn">修正する</button>
                 <button type="submit" id="submitBtn" class="primary-btn flex-grow">この内容で送信する</button>
             </div>
+        </div>
+
+        <!-- 一時保存ボタン：画面の下に常に表示（フォームを開いている間だけ） -->
+        <div class="draft-bar">
+            <button type="button" class="draft-btn">一時保存</button>
         </div>
     </form>
 </div>

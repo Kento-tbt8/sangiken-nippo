@@ -177,6 +177,26 @@ hr {
     font-size: 1rem;
 }
 
+/* 画面の下に固定する一時保存ボタンの帯 */
+.draft-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: center;
+}
+.draft-bar .draft-btn {
+    max-width: 450px;
+    margin-top: 0;
+}
+/* 下の帯にフォームの最後が隠れないよう、余白を空ける */
+#reportForm { padding-bottom: 90px; }
+
 .draft-btn {
     width: 100%;
     margin-top: 10px;
@@ -238,8 +258,9 @@ hr {
 
 .toast {
     position: fixed;
+    z-index: 60;
     left: 50%;
-    bottom: 24px;
+    bottom: 96px; /* 一時保存の帯より上に出す */
     transform: translateX(-50%) translateY(20px);
     background: rgba(33, 37, 41, 0.92);
     color: white;

@@ -48,6 +48,7 @@ function doPost(e) {
       const now = new Date();
       // 管理No.：報告データにある一番大きい番号＋1（行を消しても番号がかぶらない）
       const managementNo = nextManagementNo_(ss.getSheetByName("報告データ"));
+      p.managementNo = managementNo; // LINEのカードにも出す
 
       // --- 1. 「報告データ」シート：蓄積用（データベース） ---
       const reportSheet = ss.getSheetByName("報告データ");
@@ -321,11 +322,13 @@ function buildReportFlex_(p, pdfUrl) {
     {
       type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm',
       contents: [
+        row('管理No.', val(p.managementNo)),
         row('元請け', val(p.primeContractor)),
         row('監督', val(p.director)),
         row('作業時間', time),
         row('天気', val(p.weather)),
         row('作業者', workers),
+        row('応援者', val(p.supportMember || p.support)),
         row('記入者', val(p.record))
       ]
     }
