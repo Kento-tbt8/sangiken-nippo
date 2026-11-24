@@ -46,13 +46,12 @@ function doPost(e) {
     lock.waitLock(60000);
     try {
       const now = new Date();
+      // 管理No.：報告データにある一番大きい番号＋1（行を消しても番号がかぶらない）
+      const managementNo = nextManagementNo_(ss.getSheetByName("報告データ"));
 
       // --- 1. 「報告データ」シート：蓄積用（データベース） ---
       const reportSheet = ss.getSheetByName("報告データ");
       if (reportSheet) {
-
-        let lastRow = reportSheet.getLastRow();
-        let managementNo = 1000 + lastRow; // 1行目がヘッダーなら、2行目に書き込むときは「1」になります
 
         // 基本データ
         let reportRow = [managementNo, now, p.record, p.date, p.startTime, p.endTime, p.weather, p.site, p.director, p.primeContractor, p.salesStaff, p.count, p.name, p.supportMember, p.notes];
@@ -72,10 +71,7 @@ function doPost(e) {
       const materialSheet = ss.getSheetByName("材料データ");
       if (materialSheet) {
 
-        let lastRow = reportSheet.getLastRow();
-        let managementsNo = 999 + lastRow; // 1行目がヘッダーなら、2行目に書き込むときは「1」になります
-
-        let materialRow = [managementsNo, now, p.record];
+        let materialRow = [managementNo, now, p.record];
         // 通常材料
         if (p.materialArray && p.materialArray.length > 0) {
           p.materialArray.forEach(item => { if (item.name) materialRow.push(item.name, item.qty); });
@@ -184,6 +180,17 @@ function doPost(e) {
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({result: 'error', message: err.toString()})).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+/** 次の管理No.（A列の数字の一番大きいもの＋1。まだ無ければ 1001。今までの「1000＋行数」と同じ番号になる） */
+function nextManagementNo_(sheet) {
+  let max = 1000;
+  if (sheet && sheet.getLastRow() >= 2) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().forEach(r => {
+      if (typeof r[0] === 'number' && r[0] > max) max = r[0];
+    });
+  }
+  return max + 1;
 }
 
 /**
