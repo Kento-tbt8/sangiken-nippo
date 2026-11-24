@@ -443,18 +443,61 @@ const showStep = (s) => {
 };
 
 // Step1 → 2
-document.getElementById('nextBtn1').onclick = () => {
-    const fields = ['record', 'date', 'startTime', 'endTime', 'weather', 'site'];
-    if (!fields.every(id => document.getElementById(id).value)) { alert('未入力項目があります'); return; }
+// 必須の項目（ここに足せば、送信前のチェックにも入る）
+const REQUIRED_FIELDS = [
+    { id: 'record', label: '記入者' },
+    { id: 'date', label: '日付' },
+    { id: 'startTime', label: '開始時刻' },
+    { id: 'endTime', label: '終了時刻' },
+    { id: 'weather', label: '天気' },
+    { id: 'site', label: '現場名' },
+    { id: 'memberCount', label: '人工' },
+    { id: 'memberName', label: '作業者名' }
+];
 
-    const locInputs = document.querySelectorAll('.loc-input');
-    const hasLocInput = Array.from(locInputs).some(input => input.value.trim() !== "");
-    if (!hasLocInput) { alert('施工箇所を1つは入力してください'); return; }
+// まだ入力されていない必須項目を返す
+function findMissing() {
+    const missing = [];
+    REQUIRED_FIELDS.forEach(f => {
+        const el = document.getElementById(f.id);
+        if (el && !String(el.value).trim()) missing.push({ el, label: f.label });
+    });
+    const other = document.getElementById('otherSiteInput');
+    if (document.getElementById('site').value === 'OTHER_SITE' && other && !other.value.trim()) {
+        missing.push({ el: other, label: '現場名（その他）' });
+    }
+    const locs = Array.from(document.querySelectorAll('.loc-input'));
+    if (!locs.some(i => i.value.trim() !== '')) missing.push({ el: locs[0], label: '施工箇所（1つ以上）' });
+    return missing;
+}
+
+// 未入力の項目を赤くして、1ページ目のその場所へ戻す。未入力が無ければ true
+function checkRequired() {
+    document.querySelectorAll('.missing').forEach(el => el.classList.remove('missing'));
+    const missing = findMissing();
+    if (missing.length === 0) return true;
+    missing.forEach(m => m.el && m.el.classList.add('missing'));
+    alert('まだ入力されていない項目があります。\n\n・' + missing.map(m => m.label).join('\n・') +
+          '\n\n1ページ目の赤い枠のところを入力してください。');
+    showStep(1);
+    if (missing[0].el) missing[0].el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+}
+
+// 入力したら赤い枠を外す
+document.addEventListener('input', e => { if (e.target.classList) e.target.classList.remove('missing'); });
+document.addEventListener('change', e => { if (e.target.classList) e.target.classList.remove('missing'); });
+
+// Step1 → 2：未入力があっても進める（送信前の「内容確認へ」で止める）
+document.getElementById('nextBtn1').onclick = () => {
+    const n = findMissing().length;
     showStep(2);
+    if (n > 0) toast(`未入力が${n}件あります。「内容確認へ」で確認します`);
 };
 
 // Step2 → 3
 document.getElementById('nextBtn2').onclick = () => {
+    if (!checkRequired()) return; // 未入力があれば、確認画面には進ませない
     const getVal = (id) => {
         const el = document.getElementById(id);
         return el ? el.value : "";
@@ -539,6 +582,7 @@ document.getElementById('backBtn2').onclick = () => showStep(2);
 // 送信
 document.getElementById('reportForm').onsubmit = async function(e) {
     e.preventDefault();
+    if (!checkRequired()) return; // 念のため、送信の直前にももう一度確かめる
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; btn.innerText = "送信中...";
 

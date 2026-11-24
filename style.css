@@ -274,3 +274,9 @@ hr {
     text-align: center;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* 未入力の必須項目 */
+.missing {
+    border: 2px solid #dc3545 !important;
+    background: #fff5f5 !important;
+}
